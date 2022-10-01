@@ -179,7 +179,29 @@ class Package(object):
             raise Exception(f"Tarfile '{self.tarfile}' not found")
         else:
             with tarfile.open(self.tarfile, "r") as f:
-                f.extractall()
+                
+                import os
+                
+                def is_within_directory(directory, target):
+                    
+                    abs_directory = os.path.abspath(directory)
+                    abs_target = os.path.abspath(target)
+                
+                    prefix = os.path.commonprefix([abs_directory, abs_target])
+                    
+                    return prefix == abs_directory
+                
+                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                
+                    for member in tar.getmembers():
+                        member_path = os.path.join(path, member.name)
+                        if not is_within_directory(path, member_path):
+                            raise Exception("Attempted Path Traversal in Tar File")
+                
+                    tar.extractall(path, members, numeric_owner) 
+                    
+                
+                safe_extract(f)
                 self.root = os.path.join(os.getcwd(), self.name)
                 srcinfo = SRCINFO(module, os.path.join(self.root, ".SRCINFO"))
                 self.__version(
